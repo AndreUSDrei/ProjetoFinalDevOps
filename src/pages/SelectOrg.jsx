@@ -53,14 +53,14 @@ const SelectOrg = () => {
 					<div className="flex items-center gap-2">
 						<span className="h-2 w-2 rounded-full bg-[#ff4655]" />
 						<span className="text-xs font-bold uppercase tracking-widest text-[#ff4655]">
-							Riot Games VCT 2026 Circuit • Franchised & Partner Teams
+							Circuito Oficial VCT 2026 • Franquias Parceiras Riot Games
 						</span>
 					</div>
 					<h1 className="text-3xl lg:text-4xl font-black text-white uppercase tracking-tighter mt-1">
-						Official <span className="text-[#ff4655]">Franchises</span>
+						Propostas de <span className="text-[#ff4655]">Emprego</span>
 					</h1>
 					<p className="text-gray-400 mt-1 text-sm md:text-base">
-						Welcome, <span className="text-white font-bold">{manager.managerName}</span> ({manager.reputation}). Escolha uma organização oficial do VCT para iniciar sua carreira.
+						Bem-vindo, <span className="text-white font-bold">{manager.managerName || 'Treinador'}</span> ({manager.reputation}). Escolha uma organização oficial do VCT para iniciar sua carreira.
 					</p>
 				</div>
 
@@ -138,13 +138,13 @@ const SelectOrg = () => {
 
 								{org.status === 'Ascended' && (
 									<div className="absolute top-0 right-0 bg-[#0f1923] border-b border-l border-yellow-500/40 text-yellow-400 text-[9px] font-black px-2 py-0.5 uppercase tracking-widest rounded-bl-xs">
-										Ascended Guest
+										Acesso Ascension
 									</div>
 								)}
 
 								{org.tier === 'S' && org.status !== 'Ascended' && (
 									<div className="absolute top-0 right-0 bg-[#ff4655] text-white text-[9px] font-black px-2 py-0.5 uppercase tracking-widest rounded-bl-xs">
-										World Giant
+										Gigante Mundial
 									</div>
 								)}
 

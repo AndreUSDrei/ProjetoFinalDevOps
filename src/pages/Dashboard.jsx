@@ -19,6 +19,7 @@ import Modal from '../components/ui/Modal';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import TransferMarket from './TransferMarket';
+import SquadManagement from './SquadManagement';
 import { useGame } from '../context/GameContext';
 import { formatCurrency } from '../utils/formatters';
 
@@ -99,12 +100,12 @@ const Dashboard = () => {
 										</div>
 
 										<h2 className="text-3xl lg:text-4xl font-black uppercase tracking-tighter mb-3">
-											Bem-vindo, <span className="text-[#ff4655]">Coach {manager.managerName.split(' ')[0]}</span>
+											Bem-vindo, <span className="text-[#ff4655]">Treinador {manager.managerName ? manager.managerName.split(' ')[0] : ''}</span>
 										</h2>
 
 										<p className="text-gray-300 text-base leading-relaxed mb-6">
-											A diretoria da <span className="font-bold text-white">{organization.name}</span> oficializou sua contratação como Head Coach & General Manager.
-											Com sua base em <span className="text-white font-semibold">{manager.originCity}</span>, nível <span className="text-white font-semibold">{manager.coachLevel}</span> (OVR {manager.overallRating}) e reputação de <span className="text-[#ff4655] font-semibold">{manager.reputation}</span>, o objetivo é construir uma dinastia no VCT {organization.region}.
+											A diretoria da <span className="font-bold text-white">{organization.name}</span> oficializou sua contratação como Treinador Principal & General Manager.
+											Representando {manager.country ? <strong className="text-white">{manager.country}</strong> : 'o cenário internacional'} e com reputação de <span className="text-[#ff4655] font-semibold">{manager.reputation}</span>, o objetivo é construir uma dinastia no VCT {organization.region}.
 										</p>
 
 										<div className="flex flex-wrap items-center gap-3">
@@ -174,26 +175,26 @@ const Dashboard = () => {
 										</div>
 									</div>
 
-									{/* Head Coach Profile Card */}
+									{/* Card Perfil do Treinador */}
 									<div className="bg-[#111827] border border-[#1f2937] p-6 rounded-xs flex flex-col justify-between">
 										<div>
 											<div className="flex justify-between items-start mb-4">
 												<h3 className="text-gray-400 text-xs font-black uppercase tracking-widest flex items-center gap-2">
-													<Award size={16} className="text-[#ff4655]" /> Perfil do GM
+													<Award size={16} className="text-[#ff4655]" /> Perfil do Treinador
 												</h3>
-												<span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[#0f1923] border border-[#ff4655]/40 text-[#ff4655]">
-													OVR {manager.overallRating}
+												<span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-[#0f1923] border border-[#ff4655]/40 text-[#ff4655]">
+													{manager.country || 'VCT'}
 												</span>
 											</div>
 
-											<p className="text-base font-bold text-white">{manager.managerName}</p>
-											<p className="text-xs text-gray-400 mt-0.5">{manager.originCity} • Nível {manager.coachLevel}</p>
-											<p className="text-xs text-[#ff4655] font-semibold mt-1">{manager.reputation}</p>
+											<p className="text-lg font-black text-white">{manager.managerName || 'Treinador'}</p>
+											<p className="text-xs text-gray-400 mt-0.5">País: <strong className="text-gray-300">{manager.country || 'Não informado'}</strong></p>
+											<p className="text-xs text-[#ff4655] font-semibold mt-1.5">{manager.reputation}</p>
 										</div>
 
 										<div className="mt-4 pt-4 border-t border-[#1f2937] flex items-center justify-between text-xs text-gray-400">
 											<span>Fase Atual:</span>
-											<span className="text-white font-bold uppercase tracking-wider">Fase 2 em Andamento</span>
+											<span className="text-white font-bold uppercase tracking-wider">Fase 3 Concluída</span>
 										</div>
 									</div>
 								</div>
@@ -331,23 +332,8 @@ const Dashboard = () => {
 						{/* Transfer Market View (Fase 2) */}
 						{currentView === 'transfers' && <TransferMarket />}
 
-						{/* Placeholder for Squad Management */}
-						{currentView === 'squad' && (
-							<div className="bg-[#111827] border border-[#1f2937] p-10 rounded-xs text-center space-y-4">
-								<Users size={48} className="mx-auto text-[#ff4655]" />
-								<h3 className="text-2xl font-black uppercase text-white">Gestão Tática do Elenco (Fase 3)</h3>
-								<p className="text-gray-400 text-sm max-w-lg mx-auto">
-									Área de montagem tática da Fase 3: escalação detalhada por função, cálculo de perda por Role Swap e sinergia de IGL.
-								</p>
-								<Button
-									variant="secondary"
-									onClick={() => setCurrentView('overview')}
-									className="text-xs py-2 px-4 mx-auto"
-								>
-									Voltar ao Painel do Clube
-								</Button>
-							</div>
-						)}
+						{/* Squad Management View (Fase 3) */}
+						{currentView === 'squad' && <SquadManagement />}
 					</div>
 				</main>
 			</div>

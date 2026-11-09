@@ -287,17 +287,17 @@ Exemplo de estrutura JSON para popular a base de testes:
 
   * \[x\] Filtro rápido para "Free Agents" (jogadores sem clube).
 
-* \[ \] **Fase 3: Montagem Tática & Gestão do Elenco (PRÓXIMO OBJETIVO)**
+* \[x\] **Fase 3: Montagem Tática & Gestão do Elenco (CONCLUÍDO)**
 
-  * \[ \] Tela `SquadManagement.jsx` com visualização dos 5 Slots Titulares e 2 Reservas.
+  * \[x\] Tela `SquadManagement.jsx` com visualização dos 5 Slots Titulares e 2 Reservas.
 
-  * \[ \] Indicador de Validação Tática: Sinalizador se faltar Duelista, Controlador, Sentinela ou Iniciador.
+  * \[x\] Indicador de Validação Tática: Sinalizador se faltar Duelista, Controlador, Sentinela ou Iniciador.
 
-  * \[ \] Mecânica de Drag-and-Drop ou Seleção por Slot para troca de posição.
+  * \[x\] Mecânica de Drag-and-Drop ou Seleção por Slot para troca de posição.
 
-  * \[ \] Cálculo automático de Overall do Time com bônus de IGL e perda por Role Swap.
+  * \[x\] Cálculo automático de Overall do Time com bônus de IGL e perda por Role Swap.
 
-* \[ \] **Fase 4: Motor de Simulação de Partidas e Progressão**
+* \[ \] **Fase 4: Motor de Simulação de Partidas e Progressão (PRÓXIMO OBJETIVO)**
 
   * \[ \] Algoritmo de simulação de confrontos no estilo ValorantSimulator.com.
 
