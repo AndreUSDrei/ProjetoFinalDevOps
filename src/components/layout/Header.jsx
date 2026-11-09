@@ -23,6 +23,11 @@ const Header = () => {
 						<span className="text-xs px-2 py-0.5 rounded bg-[#0f1923] text-gray-400 border border-[#1f2937] font-semibold">
 							{organization.league || organization.region}
 						</span>
+						{organization.status === 'Ascended' && (
+							<span className="text-[10px] px-2 py-0.5 rounded bg-yellow-500/15 text-yellow-400 border border-yellow-500/40 font-black uppercase tracking-widest">
+								Ascension
+							</span>
+						)}
 					</div>
 					<p className="text-xs text-gray-400 font-medium">
 						Treinador: <span className="text-gray-200 font-bold">{manager.managerName || 'Treinador'}</span>

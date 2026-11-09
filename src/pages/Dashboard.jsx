@@ -380,6 +380,29 @@ const Dashboard = () => {
 						</div>
 					</div>
 
+					{(organization.history || (organization.titles && organization.titles.length > 0)) && (
+						<div className="space-y-2 pt-2 border-t border-[#1f2937]">
+							<p className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+								<Award size={14} className="text-yellow-500" /> Histórico & Títulos
+							</p>
+							{organization.history && (
+								<div className="p-3 bg-[#0f1923] border border-[#1f2937] text-gray-200 text-xs leading-relaxed rounded-xs">
+									{organization.history}
+								</div>
+							)}
+							{organization.titles && (
+								<ul className="space-y-1.5">
+									{(Array.isArray(organization.titles) ? organization.titles : [organization.titles]).map((title, idx) => (
+										<li key={idx} className="text-[11px] text-gray-300 flex items-start gap-1.5">
+											<Award size={12} className="text-yellow-500 shrink-0 mt-0.5" />
+											<span>{title}</span>
+										</li>
+									))}
+								</ul>
+							)}
+						</div>
+					)}
+
 					<div className="pt-2">
 						<Button
 							onClick={() => setIsExpectationsModalOpen(false)}

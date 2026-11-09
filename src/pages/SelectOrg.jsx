@@ -11,16 +11,20 @@ const SelectOrg = () => {
 	const [selectedId, setSelectedId] = useState(teams[0]?.id || null);
 	const [selectedLeague, setSelectedLeague] = useState('ALL');
 	const [selectedTier, setSelectedTier] = useState('ALL');
+	const [selectedStatus, setSelectedStatus] = useState('ALL');
 	const [searchQuery, setSearchQuery] = useState('');
 
 	const filteredTeams = teams.filter((team) => {
 		const matchesLeague = selectedLeague === 'ALL' || team.league === selectedLeague || team.region === selectedLeague;
 		const matchesTier = selectedTier === 'ALL' || team.tier === selectedTier;
+		const matchesStatus =
+			selectedStatus === 'ALL' ||
+			(selectedStatus === 'Ascended' ? team.status === 'Ascended' : team.status !== 'Ascended');
 		const matchesSearch =
 			team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
 			team.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
 			team.league.toLowerCase().includes(searchQuery.toLowerCase());
-		return matchesLeague && matchesTier && matchesSearch;
+		return matchesLeague && matchesTier && matchesStatus && matchesSearch;
 	});
 
 	const selectedOrganization = teams.find((org) => org.id === selectedId);
@@ -108,7 +112,22 @@ const SelectOrg = () => {
 							<option value="S" className="bg-[#111827]">Tier S (Mundiais)</option>
 							<option value="A" className="bg-[#111827]">Tier A (Playoffs)</option>
 							<option value="B" className="bg-[#111827]">Tier B (Regionais)</option>
-							<option value="C" className="bg-[#111827]">Tier C (Ascension)</option>
+							<option value="C" className="bg-[#111827]">Tier C (Emergentes)</option>
+						</select>
+					</div>
+
+					{/* Status Filter */}
+					<div className="flex items-center gap-2 bg-[#111827] border border-[#1f2937] px-3 py-1.5 rounded-xs">
+						<ShieldAlert size={14} className="text-gray-400" />
+						<span className="text-xs text-gray-400 font-bold uppercase">Status:</span>
+						<select
+							value={selectedStatus}
+							onChange={(e) => setSelectedStatus(e.target.value)}
+							className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
+						>
+							<option value="ALL" className="bg-[#111827]">Todos</option>
+							<option value="Partner" className="bg-[#111827]">Parceiros Riot</option>
+							<option value="Ascended" className="bg-[#111827]">Ascension</option>
 						</select>
 					</div>
 				</div>
@@ -137,8 +156,8 @@ const SelectOrg = () => {
 								{isSelected && <div className="absolute top-0 left-0 w-1.5 h-full bg-[#ff4655]" />}
 
 								{org.status === 'Ascended' && (
-									<div className="absolute top-0 right-0 bg-[#0f1923] border-b border-l border-yellow-500/40 text-yellow-400 text-[9px] font-black px-2 py-0.5 uppercase tracking-widest rounded-bl-xs">
-										Acesso Ascension
+									<div className="absolute top-0 right-0 bg-[#0f1923] border-b border-l border-yellow-500/40 text-yellow-400 text-[9px] font-black px-2 py-0.5 uppercase tracking-widest rounded-bl-xs flex items-center gap-1">
+										<Star size={9} /> Ascension
 									</div>
 								)}
 
@@ -202,8 +221,13 @@ const SelectOrg = () => {
 										{selectedOrganization.name}
 									</h3>
 									<p className="text-gray-400 text-xs mt-1">
-										{selectedOrganization.league} • {selectedOrganization.country} ({selectedOrganization.status})
+										{selectedOrganization.league} • {selectedOrganization.country}
 									</p>
+									<div className="mt-2 flex justify-center">
+										<Badge variant={selectedOrganization.status === 'Ascended' ? 'yellow' : 'green'}>
+											{selectedOrganization.status === 'Ascended' ? 'Ascension' : 'Parceiro Riot'}
+										</Badge>
+									</div>
 								</div>
 
 								{/* Transfer budget stat */}
@@ -225,6 +249,28 @@ const SelectOrg = () => {
 										{selectedOrganization.expectation}
 									</p>
 								</div>
+
+								{/* Histórico & Títulos (contexto competitivo da organização) */}
+								{(selectedOrganization.history || (selectedOrganization.titles && selectedOrganization.titles.length > 0)) && (
+									<div className="bg-[#0f1923] border border-[#1f2937] p-4 rounded-xs space-y-2">
+										<p className="text-xs text-[#ff4655] uppercase font-black tracking-widest flex items-center gap-1.5">
+											<Trophy size={14} /> Histórico & Títulos
+										</p>
+										{selectedOrganization.history && (
+											<p className="text-xs text-gray-300 leading-relaxed">{selectedOrganization.history}</p>
+										)}
+										{selectedOrganization.titles && (
+											<ul className="space-y-1 pt-1">
+												{(Array.isArray(selectedOrganization.titles) ? selectedOrganization.titles : [selectedOrganization.titles]).map((title, idx) => (
+													<li key={idx} className="text-[11px] text-gray-400 flex items-start gap-1.5">
+														<Award size={12} className="text-yellow-500 shrink-0 mt-0.5" />
+														<span>{title}</span>
+													</li>
+												))}
+											</ul>
+										)}
+									</div>
+								)}
 
 								{/* Sign Contract CTA */}
 								<Button onClick={handleSignContract} className="w-full py-3.5 text-sm mt-4">
