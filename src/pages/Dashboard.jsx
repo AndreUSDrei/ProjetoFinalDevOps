@@ -20,6 +20,7 @@ import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import TransferMarket from './TransferMarket';
 import SquadManagement from './SquadManagement';
+import MatchSim from './MatchSim';
 import { useGame } from '../context/GameContext';
 import { formatCurrency } from '../utils/formatters';
 
@@ -334,6 +335,9 @@ const Dashboard = () => {
 
 						{/* Squad Management View (Fase 3) */}
 						{currentView === 'squad' && <SquadManagement />}
+
+						{/* Match Simulation View (Fase 4) */}
+						{currentView === 'matches' && <MatchSim />}
 					</div>
 				</main>
 			</div>

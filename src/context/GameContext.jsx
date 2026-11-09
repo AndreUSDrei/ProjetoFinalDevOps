@@ -6,6 +6,7 @@ import {
 	calculateSquadStats,
 	validateTacticalComposition,
 } from '../utils/calculators';
+import { applyProgression } from '../utils/matchEngine';
 
 const GameContext = createContext(null);
 
@@ -95,6 +96,9 @@ export const GameProvider = ({ children }) => {
 
 	// Available balance / Transfer budget
 	const [budget, setBudget] = useState(0);
+
+	// Histórico de partidas simuladas
+	const [matchHistory, setMatchHistory] = useState([]);
 
 	// Global list of players in the transfer market & world
 	const [marketPlayers, setMarketPlayers] = useState(() =>
@@ -403,6 +407,40 @@ export const GameProvider = ({ children }) => {
 		return { success: true, message: `${sub.nickname} assumiu a vaga de ${starter.nickname}!` };
 	};
 
+	/**
+	 * Registra o resultado de uma partida simulada e aplica a evolução de jovens ao elenco.
+	 */
+	const recordMatchResult = (result) => {
+		setMatchHistory((prev) => [
+			{
+				id: result.id,
+				mapName: result.mapName,
+				teamAName: result.teamA.name,
+				teamBName: result.teamB.name,
+				scoreA: result.scoreA,
+				scoreB: result.scoreB,
+				winnerName: result.winnerName,
+				mvpNick: result.mvp?.nickname || null,
+				at: Date.now(),
+			},
+			...prev,
+		]);
+
+		const allRoster = [...roster.starters, ...roster.substitutes];
+		const { players: updated, changes } = applyProgression(allRoster, result.playerStats);
+		setRoster({
+			starters: updated.slice(0, roster.starters.length),
+			substitutes: updated.slice(roster.starters.length),
+		});
+		setMarketPlayers((prev) =>
+			prev.map((p) => {
+				const u = updated.find((x) => x.id === p.id);
+				return u ? { ...p, stats: u.stats, overall: u.overall } : p;
+			})
+		);
+		return changes;
+	};
+
 	// Squad Stats calculados em tempo real (Overall coletivo, sinergias, penalidades)
 	const squadStats = useMemo(() => {
 		return calculateSquadStats(roster.starters, tacticalSlots, organization?.region);
@@ -414,6 +452,7 @@ export const GameProvider = ({ children }) => {
 		setCurrentView('overview');
 		setOrganization(null);
 		setBudget(0);
+		setMatchHistory([]);
 		setRoster({ starters: [], substitutes: [] });
 		setTacticalSlots({
 			duelist: null,
@@ -453,6 +492,8 @@ export const GameProvider = ({ children }) => {
 		sellPlayer,
 		releasePlayer,
 		swapStarterSub,
+		matchHistory,
+		recordMatchResult,
 		resetGame,
 	};
 

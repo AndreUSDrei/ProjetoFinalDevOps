@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Users, DollarSign, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, DollarSign, Settings, LogOut, Swords } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 
 const Sidebar = () => {
@@ -20,6 +20,11 @@ const Sidebar = () => {
 			id: 'transfers',
 			label: 'Mercado de Transferências',
 			icon: DollarSign,
+		},
+		{
+			id: 'matches',
+			label: 'Simulação de Partidas',
+			icon: Swords,
 		},
 	];
 
