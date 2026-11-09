@@ -73,7 +73,7 @@ const PlayerRow = ({
 					)}
 					{isImport && (
 						<span className="bg-red-500/20 text-red-400 border border-red-500/40 text-[9px] font-black px-1.5 py-0.2 rounded-xs uppercase">
-							Import
+							Estrangeiro
 						</span>
 					)}
 				</div>

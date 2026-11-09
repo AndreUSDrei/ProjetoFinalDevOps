@@ -160,7 +160,7 @@ const TransferMarket = () => {
 						</span>
 					</div>
 					<h2 className="text-3xl font-black text-white uppercase tracking-tighter mt-1">
-						Transfer <span className="text-[#ff4655]">Market</span>
+						Mercado de <span className="text-[#ff4655]">Transferências</span>
 					</h2>
 					<p className="text-gray-400 text-sm mt-0.5">
 						Explore, negocie e assine com atletas do cenário internacional para o seu elenco da{' '}

@@ -59,6 +59,11 @@ export const calculateEffectiveOverall = (player, assignedRole) => {
 		return baseOverall;
 	}
 
+	// Flex (Coringa) pode atuar no slot Flex sem penalidade
+	if (assignedRole.toLowerCase() === 'flex') {
+		return baseOverall;
+	}
+
 	// Fórmula: PenaltyMultiplier = (100 - FLE) * 0.003
 	const fle = stats.FLE || 70;
 	const penaltyMultiplier = (100 - fle) * 0.003;
@@ -167,5 +172,146 @@ export const calculateTeamSynergy = (activeLineup = []) => {
 		statusText: hasIGL
 			? `IGL Presente (+4 Sinergia Mental)`
 			: `Sem IGL Titular (-5 QI Coletivo em Clutches)`,
+	};
+};
+
+/**
+ * Validação Tática Oficial do VCT (PRD Seção 3.1 Item 3)
+ * A composição obrigatória exige ao menos 1 Duelista, 1 Iniciador, 1 Controlador e 1 Sentinela.
+ * A 5ª vaga é livre (Flex).
+ *
+ * @param {Array} starters - Lista de titulares (objetos ou com suas roles)
+ * @returns {Object} { valid, missingRoles, counts, statusText }
+ */
+export const validateTacticalComposition = (starters = []) => {
+	const requiredRoles = ['Duelist', 'Initiator', 'Controller', 'Sentinel'];
+	const counts = {
+		Duelist: 0,
+		Initiator: 0,
+		Controller: 0,
+		Sentinel: 0,
+		Flex: 0,
+	};
+
+	starters.forEach((player) => {
+		if (!player) return;
+		const role = player.primaryRole || 'Flex';
+		if (counts[role] !== undefined) {
+			counts[role] += 1;
+		} else {
+			counts.Flex += 1;
+		}
+	});
+
+	const missingRoles = requiredRoles.filter((role) => counts[role] === 0);
+	const isFull = starters.length === 5;
+	const valid = isFull && missingRoles.length === 0;
+
+	let statusText = 'Composição Tática Balanceada';
+	if (starters.length < 5) {
+		statusText = `Elenco Incompleto (${starters.length}/5 Titulares)`;
+	} else if (missingRoles.length > 0) {
+		statusText = `Falta função tática: ${missingRoles.join(', ')}`;
+	}
+
+	return {
+		valid,
+		isFull,
+		missingRoles,
+		counts,
+		statusText,
+	};
+};
+
+/**
+ * Cálculo Coletivo do Quinteto Titular (Team Rating Engine)
+ * Calcula o Team Overall, penalidades por Role Swap, IGL Buff e validação geral
+ *
+ * @param {Array} starters - Lista com até 5 titulares
+ * @param {Object} slotAssignments - Mapeamento { duelist: playerId, initiator: playerId, ... }
+ * @param {string} teamRegion - Região do time
+ * @returns {Object}
+ */
+export const calculateSquadStats = (starters = [], slotAssignments = {}, teamRegion = '') => {
+	if (!Array.isArray(starters) || starters.length === 0) {
+		return {
+			teamOverall: 0,
+			baseAverage: 0,
+			effectivePlayers: [],
+			totalPenalties: 0,
+			synergy: calculateTeamSynergy([]),
+			composition: validateTacticalComposition([]),
+			importCount: 0,
+			hasImportViolation: false,
+		};
+	}
+
+	const roleKeys = ['duelist', 'initiator', 'controller', 'sentinel', 'flex'];
+	const roleNames = {
+		duelist: 'Duelist',
+		initiator: 'Initiator',
+		controller: 'Controller',
+		sentinel: 'Sentinel',
+		flex: 'Flex',
+	};
+
+	let totalEffective = 0;
+	let totalBase = 0;
+	let totalPenalties = 0;
+
+	const effectivePlayers = starters.map((player) => {
+		const baseOvr = player.overall || calculateOverall(player.stats);
+		totalBase += baseOvr;
+
+		// Acha em qual slot tático este jogador foi escalado
+		let assignedSlot = 'flex';
+		for (const key of roleKeys) {
+			if (slotAssignments[key] === player.id) {
+				assignedSlot = key;
+				break;
+			}
+		}
+
+		const assignedRole = roleNames[assignedSlot] || 'Flex';
+		const effectiveOvr = calculateEffectiveOverall(player, assignedRole);
+		const penalty = baseOvr - effectiveOvr;
+
+		if (penalty > 0) totalPenalties += penalty;
+		totalEffective += effectiveOvr;
+
+		return {
+			...player,
+			assignedSlot,
+			assignedRole,
+			baseOverall: baseOvr,
+			effectiveOverall: effectiveOvr,
+			penalty,
+			isRoleSwapped: penalty > 0,
+		};
+	});
+
+	const starterCount = starters.length;
+	const baseAverage = Math.round(totalBase / starterCount);
+	let teamOverall = Math.round(totalEffective / starterCount);
+
+	// Buff de IGL no overall se houver líder
+	const synergy = calculateTeamSynergy(starters);
+	if (synergy.hasIGL) {
+		teamOverall = Math.min(99, teamOverall + 1); // +1 bônus visual de liderança
+	}
+
+	const composition = validateTacticalComposition(starters);
+	const importCount = countImports(starters, teamRegion);
+	const hasImportViolation = importCount > 1;
+
+	return {
+		teamOverall,
+		baseAverage,
+		effectivePlayers,
+		totalPenalties,
+		synergy,
+		composition,
+		importCount,
+		hasImportViolation,
 	};
 };

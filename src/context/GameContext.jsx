@@ -1,6 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 import initialPlayers from '../data/players.json';
-import { calculateOverall, validateImportRule } from '../utils/calculators';
+import {
+	calculateOverall,
+	validateImportRule,
+	calculateSquadStats,
+	validateTacticalComposition,
+} from '../utils/calculators';
 
 const GameContext = createContext(null);
 
@@ -12,6 +17,59 @@ export const useGame = () => {
 	return context;
 };
 
+// Helper to auto-assign starters to tactical slots
+const computeOptimalSlots = (starters = []) => {
+	const slots = {
+		duelist: null,
+		initiator: null,
+		controller: null,
+		sentinel: null,
+		flex: null,
+	};
+
+	const unassigned = [...starters];
+	const roles = ['duelist', 'initiator', 'controller', 'sentinel'];
+
+	// 1st pass: match primary roles exactly
+	roles.forEach((slotKey) => {
+		const idx = unassigned.findIndex(
+			(p) => p.primaryRole?.toLowerCase() === slotKey
+		);
+		if (idx !== -1) {
+			slots[slotKey] = unassigned[idx].id;
+			unassigned.splice(idx, 1);
+		}
+	});
+
+	// 2nd pass: match secondary roles for empty slots
+	roles.forEach((slotKey) => {
+		if (!slots[slotKey]) {
+			const idx = unassigned.findIndex(
+				(p) => p.secondaryRole?.toLowerCase() === slotKey
+			);
+			if (idx !== -1) {
+				slots[slotKey] = unassigned[idx].id;
+				unassigned.splice(idx, 1);
+			}
+		}
+	});
+
+	// 3rd pass: fill remaining empty core slots with remaining players
+	roles.forEach((slotKey) => {
+		if (!slots[slotKey] && unassigned.length > 0) {
+			slots[slotKey] = unassigned[0].id;
+			unassigned.shift();
+		}
+	});
+
+	// 4th pass: assign whoever is left to the Flex slot
+	if (unassigned.length > 0) {
+		slots.flex = unassigned[0].id;
+	}
+
+	return slots;
+};
+
 export const GameProvider = ({ children }) => {
 	// Game States: 'SETUP' | 'SELECT_ORG' | 'DASHBOARD'
 	const [gameState, setGameState] = useState('SETUP');
@@ -19,21 +77,16 @@ export const GameProvider = ({ children }) => {
 	// Active Tab inside Dashboard: 'overview' | 'transfers' | 'squad'
 	const [currentView, setCurrentView] = useState('overview');
 
-	// Default Head Coach / GM Profile (PRD section 2)
+	// Perfil do Treinador / General Manager
 	const [manager, setManager] = useState({
-		managerName: 'Andreus Vinícius Araújo de Andrade',
-		originCity: 'Wanel Ville',
-		coachLevel: 25,
-		overallRating: 82,
-		reputation: 'National Prospect',
+		managerName: '',
+		country: '',
+		reputation: 'Promessa Regional',
 		get name() {
 			return this.managerName;
 		},
 		get origin() {
-			return this.originCity;
-		},
-		get experience() {
-			return `Nível ${this.coachLevel} (Overall ${this.overallRating})`;
+			return this.country;
 		},
 	});
 
@@ -57,6 +110,15 @@ export const GameProvider = ({ children }) => {
 		substitutes: [],
 	});
 
+	// Tactical Slot assignments for the 5 starters: { duelist, initiator, controller, sentinel, flex }
+	const [tacticalSlots, setTacticalSlots] = useState({
+		duelist: null,
+		initiator: null,
+		controller: null,
+		sentinel: null,
+		flex: null,
+	});
+
 	// Select organization, load its real players from the database and set budget
 	const handleSelectOrganization = (org) => {
 		setOrganization(org);
@@ -64,6 +126,13 @@ export const GameProvider = ({ children }) => {
 
 		if (!org) {
 			setRoster({ starters: [], substitutes: [] });
+			setTacticalSlots({
+				duelist: null,
+				initiator: null,
+				controller: null,
+				sentinel: null,
+				flex: null,
+			});
 			return;
 		}
 
@@ -72,7 +141,6 @@ export const GameProvider = ({ children }) => {
 			(p) => p.currentTeam && p.currentTeam.toLowerCase() === org.name.toLowerCase()
 		);
 
-		// Atribui os 5 primeiros aos Titulares (Starters) e os demais a Reservas (Substitutes)
 		const starters = orgPlayers.slice(0, 5);
 		const substitutes = orgPlayers.slice(5, 7);
 
@@ -80,18 +148,65 @@ export const GameProvider = ({ children }) => {
 			starters,
 			substitutes,
 		});
+
+		// Auto-atribui os 5 titulares aos slots táticos
+		const optimalSlots = computeOptimalSlots(starters);
+		setTacticalSlots(optimalSlots);
+	};
+
+	/**
+	 * Atribui manualmente um jogador a um slot tático específico
+	 */
+	const assignSlot = (slotKey, playerId) => {
+		setTacticalSlots((prev) => {
+			const nextSlots = { ...prev };
+
+			// Se este jogador já estava em outro slot, remove-o de lá
+			Object.keys(nextSlots).forEach((k) => {
+				if (nextSlots[k] === playerId) {
+					nextSlots[k] = null;
+				}
+			});
+
+			// Atribui ao slot desejado
+			nextSlots[slotKey] = playerId;
+			return nextSlots;
+		});
+	};
+
+	/**
+	 * Auto-organiza os titulares em seus melhores slots
+	 */
+	const autoOptimizeSlots = () => {
+		const optimal = computeOptimalSlots(roster.starters);
+		setTacticalSlots(optimal);
+	};
+
+	/**
+	 * Alterna / Define o IGL da equipe
+	 */
+	const setPlayerAsIGL = (playerId) => {
+		setRoster((prev) => ({
+			...prev,
+			starters: prev.starters.map((p) => ({
+				...p,
+				isIGL: p.id === playerId,
+			})),
+			substitutes: prev.substitutes.map((p) => ({
+				...p,
+				isIGL: p.id === playerId,
+			})),
+		}));
 	};
 
 	/**
 	 * Contratação de Jogador (Buy Player)
-	 * Valida orçamento, vagas no elenco e a regra de importação da Riot Games
 	 */
 	const buyPlayer = (player) => {
 		if (!organization) {
 			return { success: false, message: 'Nenhuma organização selecionada.' };
 		}
 
-		// Checa se o jogador já está no elenco
 		const isAlreadyInTeam =
 			roster.starters.some((p) => p.id === player.id) ||
 			roster.substitutes.some((p) => p.id === player.id);
@@ -100,7 +215,6 @@ export const GameProvider = ({ children }) => {
 			return { success: false, message: `${player.nickname} já faz parte do seu elenco.` };
 		}
 
-		// Checa o limite do elenco: 5 Titulares + 2 Reservas (Total: 7)
 		const totalPlayers = roster.starters.length + roster.substitutes.length;
 		if (totalPlayers >= 7) {
 			return {
@@ -109,7 +223,6 @@ export const GameProvider = ({ children }) => {
 			};
 		}
 
-		// Checa saldo disponível
 		const cost = player.marketValue || 0;
 		if (budget < cost) {
 			return {
@@ -118,16 +231,12 @@ export const GameProvider = ({ children }) => {
 			};
 		}
 
-		// Decide se entra como titular (se houver vaga) ou reserva
 		const hasStarterSpot = roster.starters.length < 5;
 
 		if (hasStarterSpot) {
-			// Valida a regra de 1 Import no quinteto titular
 			const importValidation = validateImportRule(roster.starters, player, organization.region);
 			if (!importValidation.valid) {
-				// Se violar a regra de import nos titulares, verifica se há vaga no banco
 				if (roster.substitutes.length < 2) {
-					// Pode ser contratado como reserva
 					setBudget((prev) => prev - cost);
 					setRoster((prev) => ({
 						...prev,
@@ -148,14 +257,16 @@ export const GameProvider = ({ children }) => {
 				};
 			}
 
-			// Adiciona aos titulares
+			const updatedStarters = [...roster.starters, { ...player, currentTeam: organization.name }];
 			setBudget((prev) => prev - cost);
 			setRoster((prev) => ({
 				...prev,
-				starters: [...prev.starters, { ...player, currentTeam: organization.name }],
+				starters: updatedStarters,
 			}));
+
+			// Auto-atualiza os slots com o novo titular
+			setTacticalSlots(computeOptimalSlots(updatedStarters));
 		} else {
-			// Adiciona aos reservas
 			setBudget((prev) => prev - cost);
 			setRoster((prev) => ({
 				...prev,
@@ -163,7 +274,6 @@ export const GameProvider = ({ children }) => {
 			}));
 		}
 
-		// Atualiza o time atual do jogador no catálogo do mercado
 		setMarketPlayers((prev) =>
 			prev.map((p) => (p.id === player.id ? { ...p, currentTeam: organization.name } : p))
 		);
@@ -176,7 +286,6 @@ export const GameProvider = ({ children }) => {
 
 	/**
 	 * Venda de Jogador (Sell Player)
-	 * Remove do elenco, reembolsa 75% do valor ao saldo e libera o jogador como Free Agent
 	 */
 	const sellPlayer = (playerId) => {
 		const targetPlayer =
@@ -187,19 +296,25 @@ export const GameProvider = ({ children }) => {
 			return { success: false, message: 'Jogador não encontrado no seu elenco.' };
 		}
 
-		// Reembolso de transferência: 75% do Market Value
 		const refundValue = Math.round((targetPlayer.marketValue || 0) * 0.75);
 
-		// Remove do elenco
+		const updatedStarters = roster.starters.filter((p) => p.id !== playerId);
 		setRoster((prev) => ({
-			starters: prev.starters.filter((p) => p.id !== playerId),
+			starters: updatedStarters,
 			substitutes: prev.substitutes.filter((p) => p.id !== playerId),
 		}));
 
-		// Adiciona o valor estornado ao orçamento
+		// Limpa o slot se o jogador vendido estava escalado
+		setTacticalSlots((prev) => {
+			const nextSlots = { ...prev };
+			Object.keys(nextSlots).forEach((k) => {
+				if (nextSlots[k] === playerId) nextSlots[k] = null;
+			});
+			return nextSlots;
+		});
+
 		setBudget((prev) => prev + refundValue);
 
-		// Marca o jogador como Free Agent no mercado
 		setMarketPlayers((prev) =>
 			prev.map((p) => (p.id === playerId ? { ...p, currentTeam: 'Free Agent' } : p))
 		);
@@ -212,7 +327,6 @@ export const GameProvider = ({ children }) => {
 
 	/**
 	 * Rescisão de Contrato (Release Player)
-	 * Libera o atleta para Free Agent sem reembolso de taxa
 	 */
 	const releasePlayer = (playerId) => {
 		const targetPlayer =
@@ -223,10 +337,19 @@ export const GameProvider = ({ children }) => {
 			return { success: false, message: 'Jogador não encontrado no elenco.' };
 		}
 
+		const updatedStarters = roster.starters.filter((p) => p.id !== playerId);
 		setRoster((prev) => ({
-			starters: prev.starters.filter((p) => p.id !== playerId),
+			starters: updatedStarters,
 			substitutes: prev.substitutes.filter((p) => p.id !== playerId),
 		}));
+
+		setTacticalSlots((prev) => {
+			const nextSlots = { ...prev };
+			Object.keys(nextSlots).forEach((k) => {
+				if (nextSlots[k] === playerId) nextSlots[k] = null;
+			});
+			return nextSlots;
+		});
 
 		setMarketPlayers((prev) =>
 			prev.map((p) => (p.id === playerId ? { ...p, currentTeam: 'Free Agent' } : p))
@@ -258,13 +381,32 @@ export const GameProvider = ({ children }) => {
 			};
 		}
 
-		setRoster((prev) => ({
-			starters: [...prev.starters.filter((p) => p.id !== starterId), sub],
-			substitutes: [...prev.substitutes.filter((p) => p.id !== subId), starter],
-		}));
+		const updatedStarters = [...newStarters, sub];
+		const updatedSubs = [...roster.substitutes.filter((p) => p.id !== subId), starter];
 
-		return { success: true, message: `Troca realizada com sucesso!` };
+		setRoster({
+			starters: updatedStarters,
+			substitutes: updatedSubs,
+		});
+
+		// Substitui o jogador no slot tático
+		setTacticalSlots((prev) => {
+			const nextSlots = { ...prev };
+			Object.keys(nextSlots).forEach((k) => {
+				if (nextSlots[k] === starterId) {
+					nextSlots[k] = subId;
+				}
+			});
+			return nextSlots;
+		});
+
+		return { success: true, message: `${sub.nickname} assumiu a vaga de ${starter.nickname}!` };
 	};
+
+	// Squad Stats calculados em tempo real (Overall coletivo, sinergias, penalidades)
+	const squadStats = useMemo(() => {
+		return calculateSquadStats(roster.starters, tacticalSlots, organization?.region);
+	}, [roster.starters, tacticalSlots, organization?.region]);
 
 	// Reset Game
 	const resetGame = () => {
@@ -273,6 +415,13 @@ export const GameProvider = ({ children }) => {
 		setOrganization(null);
 		setBudget(0);
 		setRoster({ starters: [], substitutes: [] });
+		setTacticalSlots({
+			duelist: null,
+			initiator: null,
+			controller: null,
+			sentinel: null,
+			flex: null,
+		});
 		setMarketPlayers(
 			initialPlayers.map((p) => ({
 				...p,
@@ -294,6 +443,11 @@ export const GameProvider = ({ children }) => {
 		setBudget,
 		roster,
 		setRoster,
+		tacticalSlots,
+		assignSlot,
+		autoOptimizeSlots,
+		setPlayerAsIGL,
+		squadStats,
 		marketPlayers,
 		buyPlayer,
 		sellPlayer,
