@@ -275,19 +275,19 @@ Exemplo de estrutura JSON para popular a base de testes:
 
   * \[x\] Painel de Boas-Vindas (`Dashboard.jsx`).
 
-* \[ \] **Fase 2: Mercado de Transferências (OBJETIVO ATUAL)**
+* \[x\] **Fase 2: Mercado de Transferências (CONCLUÍDO)**
 
-  * \[ \] Tela `TransferMarket.jsx` com suporte a busca e filtros por Role, Região, Preço e Rating.
+  * \[x\] Tela `TransferMarket.jsx` com suporte a busca e filtros por Role, Região, Preço e Rating.
 
-  * \[ \] Sistema de Contratação: Deduzir o `marketValue` do orçamento (`budget`) da organização.
+  * \[x\] Sistema de Contratação: Deduzir o `marketValue` do orçamento (`budget`) da organização.
 
-  * \[ \] Sistema de Venda/Desligamento: Rescisão contratual ou listagem no mercado.
+  * \[x\] Sistema de Venda/Desligamento: Rescisão contratual ou listagem no mercado.
 
-  * \[ \] Validação da Regra de 1 Import durante a negociação.
+  * \[x\] Validação da Regra de 1 Import durante a negociação.
 
-  * \[ \] Filtro rápido para "Free Agents" (jogadores sem clube).
+  * \[x\] Filtro rápido para "Free Agents" (jogadores sem clube).
 
-* \[ \] **Fase 3: Montagem Tática & Gestão do Elenco**
+* \[ \] **Fase 3: Montagem Tática & Gestão do Elenco (PRÓXIMO OBJETIVO)**
 
   * \[ \] Tela `SquadManagement.jsx` com visualização dos 5 Slots Titulares e 2 Reservas.
 
