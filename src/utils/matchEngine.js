@@ -25,6 +25,26 @@ const jitter = (rng, pt, amt = 1.6) => ({
 	y: clamp(pt.y + (rng() - 0.5) * amt * 2, 1, 19),
 });
 
+const combatRating = (p) => {
+	const s = p.stats || {};
+	return (s.MEC || 50) * 0.45 + (s.ENT || 50) * 0.3 + (s.IQ || 50) * 0.15 + (s.UTI || 50) * 0.1;
+};
+
+const vulnerability = (p) => {
+	const s = p.stats || {};
+	return 120 - ((s.IQ || 50) * 0.4 + (s.MEN || 50) * 0.3 + (s.FLE || 50) * 0.3);
+};
+
+const weightedPick = (rng, arr, weightFn) => {
+	const total = arr.reduce((sum, item) => sum + Math.max(1, weightFn(item)), 0);
+	let roll = rng() * total;
+	for (const item of arr) {
+		roll -= Math.max(1, weightFn(item));
+		if (roll <= 0) return item;
+	}
+	return arr[arr.length - 1];
+};
+
 // Força coletiva do quinteto: overall médio + sinergia IGL - faltas táticas - excesso de imports.
 export const teamStrength = (team) => {
 	const starters = team.starters || [];
@@ -54,6 +74,18 @@ const buildPath = (rng, from, via, to, deathT) => {
 	];
 	if (deathT != null) {
 		// Congela o jogador no ponto onde morreu.
+		const pos = positionAt(pts, deathT);
+		return [...pts.filter((p) => p.t < deathT), { t: deathT, ...pos }, { t: 1, ...pos, dead: true }];
+	}
+	return pts;
+};
+
+const buildRoutePath = (rng, points, deathT) => {
+	const pts = points.map((p, i) => ({
+		t: points.length === 1 ? 0 : i / (points.length - 1),
+		...jitter(rng, p, i === 0 || i === points.length - 1 ? 0.8 : 1.2),
+	}));
+	if (deathT != null) {
 		const pos = positionAt(pts, deathT);
 		return [...pts.filter((p) => p.t < deathT), { t: deathT, ...pos }, { t: 1, ...pos, dead: true }];
 	}
@@ -94,7 +126,6 @@ export const simulateMatch = ({ teamA, teamB, mapId = 'ascent', seed = Date.now(
 	let scoreA = 0;
 	let scoreB = 0;
 	let roundNumber = 1;
-	let firstBloodDone = false;
 
 	const sigmoid = (d) => 1 / (1 + Math.exp(-d / 6));
 
@@ -114,6 +145,7 @@ export const simulateMatch = ({ teamA, teamB, mapId = 'ascent', seed = Date.now(
 		const deathT = {};
 		const events = [];
 		let t = 0.34;
+		let firstBloodDone = false;
 		let planted = false;
 		let planter = null;
 
@@ -123,8 +155,8 @@ export const simulateMatch = ({ teamA, teamB, mapId = 'ascent', seed = Date.now(
 			const shooterSide = winnerGetsKill ? winner : loser;
 			const targetSide = shooterSide === 'A' ? 'B' : 'A';
 			if (alive[shooterSide].length === 0 || alive[targetSide].length === 0) break;
-			const shooter = pick(rng, alive[shooterSide]);
-			const target = pick(rng, alive[targetSide]);
+			const shooter = weightedPick(rng, alive[shooterSide], combatRating);
+			const target = weightedPick(rng, alive[targetSide], vulnerability);
 			alive[targetSide] = alive[targetSide].filter((p) => p.id !== target.id);
 			deathT[target.id] = t;
 			playerStats[shooter.id].kills += 1;
@@ -178,7 +210,22 @@ export const simulateMatch = ({ teamA, teamB, mapId = 'ascent', seed = Date.now(
 		// Caminhos de movimento para o replay isométrico.
 		const moves = {};
 		lineupA.concat(lineupB).forEach((p, idx) => {
-			const isAtt = (byId[p.id].side === attacker);
+			const isAtt = byId[p.id].side === attacker;
+			if (map.routes) {
+				const route = isAtt
+					? siteKey === 'A'
+						? rng() < 0.35
+							? map.routes.midA
+							: map.routes.A
+						: rng() < 0.35
+							? map.routes.midB
+							: map.routes.B
+					: idx % 2 === 0
+						? map.routes.defA
+						: map.routes.defB;
+				moves[p.id] = buildRoutePath(rng, route, deathT[p.id]);
+				return;
+			}
 			const from = isAtt ? map.spawnAtt : map.spawnDef;
 			const via = map.mid;
 			const to = isAtt ? targetSite : idx % 2 === 0 ? map.siteA : map.siteB;

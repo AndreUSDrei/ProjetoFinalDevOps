@@ -65,6 +65,10 @@ const MatchView = ({ match, onComplete }) => {
 	useEffect(() => {
 		const canvas = canvasRef.current;
 		const ctx = canvas.getContext('2d');
+		const dpr = window.devicePixelRatio || 1;
+		canvas.width = CANVAS_W * dpr;
+		canvas.height = CANVAS_H * dpr;
+		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		const TILE = 17;
 		const cx = CANVAS_W / 2;
 		const cy = 34;
@@ -93,7 +97,7 @@ const MatchView = ({ match, onComplete }) => {
 		};
 
 		const drawBox = (b) => {
-			const z = 10;
+			const z = b.z || 10;
 			const t = [iso(b.x, b.y), iso(b.x + b.w, b.y), iso(b.x + b.w, b.y + b.h), iso(b.x, b.y + b.h)].map(([x, y]) => [x, y - z]);
 			const g = [iso(b.x, b.y), iso(b.x + b.w, b.y), iso(b.x + b.w, b.y + b.h), iso(b.x, b.y + b.h)];
 			// left face
@@ -120,6 +124,17 @@ const MatchView = ({ match, onComplete }) => {
 			ctx.fill();
 			ctx.strokeStyle = '#374151';
 			ctx.stroke();
+		};
+
+		const drawCallouts = () => {
+			if (!map.callouts) return;
+			ctx.font = '8px sans-serif';
+			ctx.textAlign = 'center';
+			ctx.fillStyle = '#6b7280';
+			map.callouts.forEach((c) => {
+				const [x, y] = iso(c.x, c.y);
+				ctx.fillText(c.name.toUpperCase(), x, y + 3);
+			});
 		};
 
 		const draw = () => {
@@ -152,7 +167,9 @@ const MatchView = ({ match, onComplete }) => {
 
 			drawSite(map.siteA, 'A', '#ff4655');
 			drawSite(map.siteB, 'B', '#38bdf8');
+			if (map.walls) map.walls.forEach(drawBox);
 			map.boxes.forEach(drawBox);
+			drawCallouts();
 
 			const rIdx = Math.min(roundRef.current, rounds.length - 1);
 			const round = rounds[rIdx];
@@ -228,8 +245,7 @@ const MatchView = ({ match, onComplete }) => {
 		};
 
 		let last = performance.now();
-		const tick = () => {
-			const now = performance.now();
+		const tick = (now) => {
 			const dt = Math.min(1, (now - last) / 1000);
 			last = now;
 			if (playingRef.current && !finishedRef.current) {
@@ -256,7 +272,7 @@ const MatchView = ({ match, onComplete }) => {
 			}
 			draw();
 		};
-		timerRef.current = setInterval(tick, 50);
+		timerRef.current = setInterval(() => tick(performance.now()), 16);
 		return () => clearInterval(timerRef.current);
 	}, [match, rounds, map]);
 
