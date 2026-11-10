@@ -3,11 +3,11 @@ import { Briefcase, DollarSign, ShieldAlert, Star, Trophy, Globe, Filter, Search
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import { useGame } from '../context/GameContext';
-import teams from '../data/teams.json';
 import { formatCurrency } from '../utils/formatters';
 
 const SelectOrg = () => {
-	const { setOrganization, setGameState, manager } = useGame();
+	const { setOrganization, setGameState, manager, organizations } = useGame();
+	const teams = organizations?.length ? organizations : [];
 	const [selectedId, setSelectedId] = useState(teams[0]?.id || null);
 	const [selectedLeague, setSelectedLeague] = useState('ALL');
 	const [selectedTier, setSelectedTier] = useState('ALL');

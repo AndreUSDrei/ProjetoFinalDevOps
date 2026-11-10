@@ -1,6 +1,8 @@
 # Valorant Manager — Como rodar o projeto
 
-**Valorant Manager (VCT Transfer & Tactical Simulator)** é um web app de gestão de eSports (estilo Football Manager) para o cenário competitivo de VALORANT. Frontend puro (sem backend e sem banco de dados), construído com React + Vite + Tailwind CSS.
+**Valorant Manager (VCT Transfer & Tactical Simulator)** é um web app de gestão de eSports (estilo Football Manager) para o cenário competitivo de VALORANT. Front-end em React + Vite + Tailwind; API Node (Express) com persistência SQLite, logs, healthcheck, Docker e CI.
+
+Repositório: https://github.com/AndreUSDrei/ProjetoFinalDevOps
 
 ---
 
@@ -8,8 +10,9 @@
 
 | Ferramenta | Versão recomendada | Verificar |
 |---|---|---|
-| Node.js | 18 ou superior (LTS recomendado) | `node -v` |
-| npm | 9 ou superior (vem com o Node) | `npm -v` |
+| Node.js | 18 ou superior (22 LTS recomendado) | `node -v` |
+| npm | 9 ou superior | `npm -v` |
+| Docker Desktop (opcional) | atual | `docker compose version` |
 | Git (opcional) | qualquer | `git --version` |
 
 Download do Node.js: https://nodejs.org
@@ -18,116 +21,198 @@ Download do Node.js: https://nodejs.org
 
 ---
 
-## 2. Dependências do projeto
+## 2. Arquitetura
 
-### Dependências de produção (`dependencies`)
+```
+Navegador → Vite (dev) ou Nginx (Docker)
+              /api  /health → Express (porta 3001)
+                                SQLite (arquivo em volume)
+```
 
-| Pacote | Versão | Para que serve |
-|---|---|---|
-| `react` | ^18.3.1 | Biblioteca de interface |
-| `react-dom` | ^18.3.1 | Renderização do React no navegador |
-| `lucide-react` | ^0.540.0 | Biblioteca de ícones |
+| Serviço | Papel |
+|---|---|
+| Front (`src/`) | UI, regras de jogo, simulação |
+| API (`server/`) | seed de jogadores/orgs, save da campanha, logs, `/health` |
+| SQLite | persistência do save + catálogo |
 
-### Dependências de desenvolvimento (`devDependencies`)
+Endpoints:
 
-| Pacote | Versão | Para que serve |
-|---|---|---|
-| `vite` | ^5.4.10 | Bundler e servidor de desenvolvimento |
-| `@vitejs/plugin-react` | ^4.3.4 | Plugin do React para o Vite |
-| `tailwindcss` | ^3.4.17 | Framework de CSS utilitário |
-| `postcss` | ^8.4.49 | Processador de CSS (exigido pelo Tailwind) |
-| `autoprefixer` | ^10.4.20 | Adiciona prefixos de navegador ao CSS |
+- `GET /health` — status, uptime, ping no banco
+- `GET /api/players` / `GET /api/organizations` — seed
+- `GET` / `PUT /api/saves/:slot` — campanha (slot `default`)
 
-Todas são instaladas automaticamente com `npm install` (versões exatas travadas no `package-lock.json`).
+Se a API estiver fora, o front grava em `localStorage` e continua jogável.
 
 ---
 
-## 3. Passo a passo para rodar
+## 3. Variáveis de ambiente
 
-### 3.1 Extrair o projeto
-Descompacte o `ProjetoFinalDevOps.zip` e entre na pasta:
+Copie os exemplos (nunca commite `.env` com segredos):
 
 ```bash
-cd ProjetoFinalDevOps
+copy .env.example .env
+copy server\.env.example server\.env
 ```
 
-### 3.2 Instalar as dependências
+| Variável | Onde | Padrão |
+|---|---|---|
+| `VITE_API_URL` | front | vazio (usa `/api` via proxy ou Nginx) |
+| `PORT` | API | `3001` |
+| `DATABASE_PATH` | API | `./data/app.db` |
+| `SEED_DIR` | API | `../src/data` |
+| `CORS_ORIGIN` | API | `http://localhost:5173` |
+| `LOG_LEVEL` | API | `info` |
+| `NODE_ENV` | API | `development` |
+
+---
+
+## 4. Passo a passo (desenvolvimento)
+
+### 4.1 Instalar dependências
+
 ```bash
 npm install
+npm --prefix server install
 ```
-Isso cria a pasta `node_modules/`. Use `npm ci` se quiser uma instalação idêntica ao `package-lock.json`.
 
-### 3.3 Iniciar em modo desenvolvimento
+### 4.2 Subir API e front
+
+Em um terminal:
+
+```bash
+npm run dev:api
+```
+
+Em outro:
+
 ```bash
 npm run dev
 ```
-Abra no navegador: **http://localhost:5173**
 
-O servidor também fica exposto na rede local (`--host` / `0.0.0.0`), então outros dispositivos da mesma rede podem acessar pelo IP da sua máquina, ex.: `http://192.168.0.10:5173`.
+Abra **http://localhost:5173**. Healthcheck: **http://localhost:3001/health**.
 
-### 3.4 Gerar build de produção
+O Vite faz proxy de `/api` e `/health` para a porta 3001.
+
+### 4.3 Build de produção do front
+
 ```bash
 npm run build
-```
-Os arquivos otimizados são gerados na pasta `dist/`.
-
-### 3.5 Testar o build de produção localmente
-```bash
 npm run preview
 ```
 
 ---
 
-## 4. Scripts disponíveis
+## 5. Docker
+
+```bash
+docker compose up --build
+```
+
+- App: **http://localhost:8080**
+- API direta: **http://localhost:3001/health**
+
+O serviço `web` só sobe depois do healthcheck da `api`. O arquivo SQLite fica no volume `sqlite-data`.
+
+Parar: `docker compose down`. Manter o banco: não use `-v`.
+
+---
+
+## 6. Testes
+
+```bash
+npm test
+```
+
+| Comando | O que cobre |
+|---|---|
+| `npm run test:front` | Vitest — fórmulas e motor de partida |
+| `npm run test:api` | Supertest — `/health`, seed, save/load |
+
+---
+
+## 7. CI/CD
+
+Push ou Pull Request para `main` dispara `.github/workflows/ci.yml`:
+
+1. Instala dependências
+2. Roda testes
+3. Faz `vite build`
+4. Faz `docker compose build`
+
+Não há publish em registry: o “deploy” de demonstração é o `docker compose up`.
+
+Como contribuir, padrão de commits e proteção de `main`: veja [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## 8. Scripts
 
 | Comando | O que faz |
 |---|---|
-| `npm run dev` | Servidor de desenvolvimento com hot reload (porta 5173) |
+| `npm run dev` | Front Vite (porta 5173) |
+| `npm run dev:api` | API Express (porta 3001) |
 | `npm run build` | Build de produção em `dist/` |
-| `npm run preview` | Serve o build de produção localmente |
+| `npm run preview` | Serve o `dist/` |
+| `npm test` | Testes front + API |
 
 ---
 
-## 5. Estrutura do projeto
+## 9. Estrutura
 
 ```
 ProjetoFinalDevOps/
-├── index.html                # Entrada HTML
-├── package.json              # Dependências e scripts
-├── vite.config.js            # Configuração do Vite (porta 5173, host 0.0.0.0)
-├── tailwind.config.js        # Configuração do Tailwind
-├── postcss.config.js         # Configuração do PostCSS
-└── src/
-    ├── main.jsx              # Ponto de entrada React
-    ├── App.jsx               # Componente raiz / navegação
-    ├── index.css             # Estilos globais + Tailwind
-    ├── context/GameContext.jsx   # Estado global do jogo
-    ├── pages/                # SelectOrg, SetupManager, Dashboard, TransferMarket
-    ├── components/           # ui/, layout/, player/
-    ├── data/                 # players.json, teams.json, organizations.js
-    └── utils/                # calculators.js, formatters.js
+├── Dockerfile                 # Front (Nginx)
+├── docker-compose.yml
+├── nginx.conf
+├── .github/workflows/ci.yml
+├── docs/apresentacao.md       # Slides da demonstração
+├── server/                    # API Express + SQLite
+│   ├── Dockerfile
+│   └── src/
+└── src/                       # React (páginas, GameContext, motor)
 ```
 
 ---
 
-## 6. Solução de problemas
+## 10. Logs e monitoramento
+
+A API emite logs JSON (pino) por request. Em desenvolvimento eles aparecem no terminal do `npm run dev:api`.
+
+Health:
+
+```bash
+curl http://localhost:3001/health
+```
+
+Resposta esperada: `"status":"ok"` e `"database":"up"`.
+
+---
+
+## 11. Solução de problemas
 
 | Problema | Solução |
 |---|---|
 | `npm` não é reconhecido | Instale o Node.js e reabra o terminal |
-| Erro de versão do Node / sintaxe | Atualize para Node 18+ |
-| Porta 5173 em uso | Feche o outro processo ou rode `npm run dev -- --port 3000` |
-| Erros estranhos após instalar | Apague `node_modules` e rode `npm install` novamente |
-| PowerShell bloqueia scripts (`running scripts is disabled`) | Execute `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
-| Não abre de outro dispositivo | Libere a porta 5173 no firewall do Windows |
+| Porta 5173 ou 3001 em uso | Feche o outro processo ou mude `PORT` / `--port` |
+| Front sem save após F5 | Confirme se a API está no ar (`/health`) |
+| SQLite experimental no Node 22 | A API usa `node:sqlite` (Node 22.5+). No 22, o Compose já define `NODE_OPTIONS=--experimental-sqlite` |
+| PowerShell bloqueia scripts | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
 
 ---
 
-## 7. Resumo rápido
+## 12. Resumo rápido
 
 ```bash
-cd ProjetoFinalDevOps
 npm install
+npm --prefix server install
+npm run dev:api
 npm run dev
-# abrir http://localhost:5173
+# http://localhost:5173
+```
+
+Demonstração em containers:
+
+```bash
+docker compose up --build
+# http://localhost:8080
 ```

@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
+    "dev:api": "npm --prefix server run dev",
     "build": "vite build",
-    "preview": "vite preview --host"
+    "preview": "vite preview --host",
+    "test": "npm run test:front && npm run test:api",
+    "test:front": "vitest run",
+    "test:api": "npm --prefix server test"
   },
   "dependencies": {
     "lucide-react": "^0.540.0",
@@ -18,6 +22,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vitest": "^2.1.9"
   }
 }

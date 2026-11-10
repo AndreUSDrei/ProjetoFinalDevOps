@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useRef } from 'react';
 import initialPlayers from '../data/players.json';
+import fallbackOrganizations from '../data/teams.json';
 import {
 	calculateOverall,
 	validateImportRule,
@@ -7,6 +8,7 @@ import {
 	validateTacticalComposition,
 } from '../utils/calculators';
 import { applyProgression } from '../utils/matchEngine';
+import { api, LOCAL_SAVE_KEY, SAVE_SLOT, serializeManager, withManagerGetters } from '../api/client';
 
 const GameContext = createContext(null);
 
@@ -122,6 +124,10 @@ export const GameProvider = ({ children }) => {
 		sentinel: null,
 		flex: null,
 	});
+
+	const [organizations, setOrganizations] = useState(fallbackOrganizations);
+	const [hydrated, setHydrated] = useState(false);
+	const skipNextPersist = useRef(true);
 
 	// Select organization, load its real players from the database and set budget
 	const handleSelectOrganization = (org) => {
@@ -446,6 +452,120 @@ export const GameProvider = ({ children }) => {
 		return calculateSquadStats(roster.starters, tacticalSlots, organization?.region);
 	}, [roster.starters, tacticalSlots, organization?.region]);
 
+	const buildSavePayload = () => ({
+		gameState,
+		currentView,
+		manager: serializeManager(manager),
+		organization,
+		budget,
+		roster,
+		tacticalSlots,
+		marketPlayers,
+		matchHistory,
+	});
+
+	const applySave = (payload) => {
+		if (!payload || typeof payload !== 'object') return;
+		if (payload.gameState) setGameState(payload.gameState);
+		if (payload.currentView) setCurrentView(payload.currentView);
+		if (payload.manager) setManager(withManagerGetters(payload.manager));
+		if (payload.organization) setOrganization(payload.organization);
+		if (typeof payload.budget === 'number') setBudget(payload.budget);
+		if (payload.roster) setRoster(payload.roster);
+		if (payload.tacticalSlots) setTacticalSlots(payload.tacticalSlots);
+		if (Array.isArray(payload.marketPlayers) && payload.marketPlayers.length > 0) {
+			setMarketPlayers(payload.marketPlayers);
+		}
+		if (Array.isArray(payload.matchHistory)) setMatchHistory(payload.matchHistory);
+	};
+
+	useEffect(() => {
+		let cancelled = false;
+
+		const hydrate = async () => {
+			try {
+				const [save, apiPlayers, apiOrgs] = await Promise.all([
+					api.getSave(SAVE_SLOT).catch(() => null),
+					api.getPlayers().catch(() => null),
+					api.getOrganizations().catch(() => null),
+				]);
+
+				if (cancelled) return;
+
+				if (Array.isArray(apiOrgs) && apiOrgs.length > 0) {
+					setOrganizations(apiOrgs);
+				}
+
+				if (save?.payload) {
+					applySave(save.payload);
+				} else {
+					const localRaw = localStorage.getItem(LOCAL_SAVE_KEY);
+					if (localRaw) {
+						applySave(JSON.parse(localRaw));
+					} else if (Array.isArray(apiPlayers) && apiPlayers.length > 0) {
+						setMarketPlayers(
+							apiPlayers.map((p) => ({
+								...p,
+								overall: p.overall || calculateOverall(p.stats),
+							}))
+						);
+					}
+				}
+			} catch {
+				try {
+					const localRaw = localStorage.getItem(LOCAL_SAVE_KEY);
+					if (localRaw && !cancelled) applySave(JSON.parse(localRaw));
+				} catch {
+					/* ignore corrupt local save */
+				}
+			} finally {
+				if (!cancelled) {
+					skipNextPersist.current = true;
+					setHydrated(true);
+				}
+			}
+		};
+
+		hydrate();
+		return () => {
+			cancelled = true;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	useEffect(() => {
+		if (!hydrated) return;
+		if (skipNextPersist.current) {
+			skipNextPersist.current = false;
+			return;
+		}
+
+		const payload = buildSavePayload();
+		try {
+			localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(payload));
+		} catch {
+			/* quota / private mode */
+		}
+
+		const timer = setTimeout(() => {
+			api.putSave(SAVE_SLOT, payload).catch(() => {});
+		}, 400);
+
+		return () => clearTimeout(timer);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [
+		hydrated,
+		gameState,
+		currentView,
+		manager,
+		organization,
+		budget,
+		roster,
+		tacticalSlots,
+		marketPlayers,
+		matchHistory,
+	]);
+
 	// Reset Game
 	const resetGame = () => {
 		setGameState('SETUP');
@@ -467,6 +587,13 @@ export const GameProvider = ({ children }) => {
 				overall: p.overall || calculateOverall(p.stats),
 			}))
 		);
+		setManager(withManagerGetters({}));
+		try {
+			localStorage.removeItem(LOCAL_SAVE_KEY);
+		} catch {
+			/* ignore */
+		}
+		api.putSave(SAVE_SLOT, { gameState: 'SETUP' }).catch(() => {});
 	};
 
 	const value = {
@@ -495,6 +622,8 @@ export const GameProvider = ({ children }) => {
 		matchHistory,
 		recordMatchResult,
 		resetGame,
+		organizations,
+		hydrated,
 	};
 
 	return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

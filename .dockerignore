@@ -1,0 +1,13 @@
+node_modules
+server/node_modules
+server/data/*.db
+server/data/*.db-*
+dist
+.git
+.github
+Fonte base GEMINI
+*.md
+!README.md
+.env
+.env.*
+!.env.example
