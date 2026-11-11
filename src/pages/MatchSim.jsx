@@ -3,12 +3,11 @@ import { Swords, MapPin, Play, Trophy, TrendingUp, X } from 'lucide-react';
 import Button from '../components/ui/Button';
 import MatchView from '../components/match/MatchView';
 import { useGame } from '../context/GameContext';
-import teams from '../data/teams.json';
 import { MAPS } from '../utils/maps';
 import { simulateMatch, teamStrength } from '../utils/matchEngine';
 
 const MatchSim = () => {
-	const { organization, roster, marketPlayers, matchHistory, recordMatchResult } = useGame();
+	const { organization, roster, marketPlayers, matchHistory, recordMatchResult, organizations } = useGame();
 	const [opponentId, setOpponentId] = useState('');
 	const [mapId, setMapId] = useState(MAPS[0].id);
 	const [match, setMatch] = useState(null);
@@ -16,7 +15,7 @@ const MatchSim = () => {
 
 	if (!organization) return null;
 
-	const opponents = teams.filter((t) => t.name !== organization.name);
+	const opponents = (organizations || []).filter((t) => t.name !== organization.name);
 	const opponent = opponents.find((t) => t.id === opponentId) || opponents[0];
 	const opponentStarters = marketPlayers
 		.filter((p) => p.currentTeam && p.currentTeam.toLowerCase() === opponent.name.toLowerCase())

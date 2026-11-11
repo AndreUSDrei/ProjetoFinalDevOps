@@ -7,9 +7,9 @@
     "node": ">=22.5.0"
   },
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
-    "test": "node --test src/*.test.js"
+    "start": "node --experimental-sqlite src/index.js",
+    "dev": "node --watch --experimental-sqlite src/index.js",
+    "test": "node --test --experimental-sqlite src/*.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

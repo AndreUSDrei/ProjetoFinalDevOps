@@ -128,6 +128,7 @@ export const GameProvider = ({ children }) => {
 	const [organizations, setOrganizations] = useState(fallbackOrganizations);
 	const [hydrated, setHydrated] = useState(false);
 	const skipNextPersist = useRef(true);
+	const [syncStatus, setSyncStatus] = useState('idle');
 
 	// Select organization, load its real players from the database and set budget
 	const handleSelectOrganization = (org) => {
@@ -548,7 +549,10 @@ export const GameProvider = ({ children }) => {
 		}
 
 		const timer = setTimeout(() => {
-			api.putSave(SAVE_SLOT, payload).catch(() => {});
+			setSyncStatus('saving');
+			api.putSave(SAVE_SLOT, payload)
+				.then(() => setSyncStatus('saved'))
+				.catch(() => setSyncStatus('error'));
 		}, 400);
 
 		return () => clearTimeout(timer);
@@ -593,7 +597,10 @@ export const GameProvider = ({ children }) => {
 		} catch {
 			/* ignore */
 		}
-		api.putSave(SAVE_SLOT, { gameState: 'SETUP' }).catch(() => {});
+		setSyncStatus('saving');
+		api.putSave(SAVE_SLOT, { gameState: 'SETUP' })
+			.then(() => setSyncStatus('saved'))
+			.catch(() => setSyncStatus('error'));
 	};
 
 	const value = {
@@ -624,6 +631,7 @@ export const GameProvider = ({ children }) => {
 		resetGame,
 		organizations,
 		hydrated,
+		syncStatus,
 	};
 
 	return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

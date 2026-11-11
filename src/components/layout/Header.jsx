@@ -2,8 +2,44 @@ import React from 'react';
 import { useGame } from '../../context/GameContext';
 import { formatCurrency } from '../../utils/formatters';
 
+const SYNC_META = {
+	saving: {
+		label: 'Salvando…',
+		className: 'text-amber-400 border-amber-500/40 bg-amber-500/10',
+		dot: 'bg-amber-400 animate-pulse',
+	},
+	saved: {
+		label: 'Sincronizado',
+		className: 'text-green-400 border-green-500/40 bg-green-500/10',
+		dot: 'bg-green-400',
+	},
+	error: {
+		label: 'Somente local',
+		className: 'text-gray-400 border-[#1f2937] bg-[#0f1923]',
+		dot: 'bg-gray-500',
+	},
+};
+
+const SyncBadge = ({ status }) => {
+	const meta = SYNC_META[status];
+	if (!meta) return null;
+	return (
+		<div
+			className={`px-3 py-2 rounded-xs border flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${meta.className}`}
+			title={
+				status === 'error'
+					? 'API indisponível: o progresso está salvo apenas neste navegador (localStorage).'
+					: 'Estado da sincronização do save com a API.'
+			}
+		>
+			<span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+			{meta.label}
+		</div>
+	);
+};
+
 const Header = () => {
-	const { organization, manager, budget } = useGame();
+	const { organization, manager, budget, syncStatus } = useGame();
 
 	if (!organization) return null;
 
@@ -36,16 +72,20 @@ const Header = () => {
 				</div>
 			</div>
 
-			{/* Mostrador de Saldo em Caixa */}
-			<div className="bg-[#0f1923] border border-[#1f2937] px-4 py-2 rounded-xs flex items-center gap-3 shadow-inner">
-				<div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-				<div>
-					<span className="text-[10px] uppercase text-gray-500 font-black tracking-widest block leading-none">
-						Orçamento em Caixa
-					</span>
-					<span className="font-mono font-bold text-green-400 text-lg leading-tight">
-						{formatCurrency(budget)}
-					</span>
+			<div className="flex items-center gap-3">
+				<SyncBadge status={syncStatus} />
+
+				{/* Mostrador de Saldo em Caixa */}
+				<div className="bg-[#0f1923] border border-[#1f2937] px-4 py-2 rounded-xs flex items-center gap-3 shadow-inner">
+					<div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+					<div>
+						<span className="text-[10px] uppercase text-gray-500 font-black tracking-widest block leading-none">
+							Orçamento em Caixa
+						</span>
+						<span className="font-mono font-bold text-green-400 text-lg leading-tight">
+							{formatCurrency(budget)}
+						</span>
+					</div>
 				</div>
 			</div>
 		</header>

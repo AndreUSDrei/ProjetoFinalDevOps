@@ -68,3 +68,13 @@ test('PUT /api/saves/default rejects non-object payloads', async () => {
 	const res = await request(app).put('/api/saves/default').send([1, 2, 3]);
 	assert.equal(res.status, 400);
 });
+
+test('PUT /api/saves/:slot rejects invalid slot ids', async () => {
+	const res = await request(app).put('/api/saves/bad..slot').send({ gameState: 'SETUP' });
+	assert.equal(res.status, 400);
+});
+
+test('GET /api/saves/:slot rejects invalid slot ids', async () => {
+	const res = await request(app).get('/api/saves/bad..slot');
+	assert.equal(res.status, 400);
+});
