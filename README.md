@@ -10,7 +10,7 @@ Repositório: https://github.com/AndreUSDrei/ProjetoFinalDevOps
 
 | Ferramenta | Versão recomendada | Verificar |
 |---|---|---|
-| Node.js | 18 ou superior (22 LTS recomendado) | `node -v` |
+| Node.js | 22.5 ou superior (22 LTS recomendado) | `node -v` |
 | npm | 9 ou superior | `npm -v` |
 | Docker Desktop (opcional) | atual | `docker compose version` |
 | Git (opcional) | qualquer | `git --version` |
