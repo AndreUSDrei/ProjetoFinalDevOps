@@ -3,6 +3,7 @@ import { Play, Pause, FastForward, SkipForward, Trophy, RotateCcw } from 'lucide
 import Button from '../ui/Button';
 import { getMap } from '../../utils/maps';
 import { positionAt } from '../../utils/matchEngine';
+import TeamLogo from '../organization/TeamLogo';
 
 const ROUND_SECONDS = 5;
 const CANVAS_W = 760;
@@ -301,7 +302,7 @@ const MatchView = ({ match, onComplete }) => {
 			{/* Scoreboard */}
 			<div className="flex items-center justify-between bg-[#111827] border border-[#1f2937] rounded-xs px-6 py-3">
 				<div className="flex items-center gap-3">
-					<span className="w-3 h-3 rounded-full" style={{ backgroundColor: match.teamA.color }} />
+					<TeamLogo team={match.teamA} className="w-9 h-9" />
 					<span className="font-black uppercase tracking-wider">{match.teamA.name}</span>
 				</div>
 				<div className="text-center">
@@ -314,7 +315,7 @@ const MatchView = ({ match, onComplete }) => {
 				</div>
 				<div className="flex items-center gap-3">
 					<span className="font-black uppercase tracking-wider">{match.teamB.name}</span>
-					<span className="w-3 h-3 rounded-full" style={{ backgroundColor: match.teamB.color }} />
+					<TeamLogo team={match.teamB} className="w-9 h-9" />
 				</div>
 			</div>
 

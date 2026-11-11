@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGame } from '../../context/GameContext';
 import { formatCurrency } from '../../utils/formatters';
+import TeamLogo from '../organization/TeamLogo';
 
 const SYNC_META = {
 	saving: {
@@ -47,12 +48,7 @@ const Header = () => {
 		<header className="h-20 border-b border-[#1f2937] flex items-center justify-between px-8 bg-[#111827]/80 backdrop-blur-md sticky top-0 z-20">
 			{/* Informações da Organização e Treinador */}
 			<div className="flex items-center gap-4">
-				<div
-					className="w-10 h-10 rounded-full flex items-center justify-center font-black text-white shadow-lg border border-white/10"
-					style={{ backgroundColor: organization.color || '#ff4655' }}
-				>
-					{organization.name.charAt(0)}
-				</div>
+				<TeamLogo team={organization} className="w-10 h-10" />
 				<div>
 					<div className="flex items-center gap-2">
 						<h2 className="text-xl font-black uppercase tracking-wider text-white">{organization.name}</h2>

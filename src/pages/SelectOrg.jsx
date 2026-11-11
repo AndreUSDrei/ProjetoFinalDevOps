@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Briefcase, DollarSign, ShieldAlert, Star, Trophy, Globe, Filter, Search, Award } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
+import TeamLogo from '../components/organization/TeamLogo';
 import { useGame } from '../context/GameContext';
 import { formatCurrency } from '../utils/formatters';
 
@@ -169,10 +170,7 @@ const SelectOrg = () => {
 
 								<div className="flex justify-between items-start mb-3">
 									<h3 className="text-xl font-black text-white tracking-wide flex items-center gap-2.5">
-										<span
-											className="w-3.5 h-3.5 rounded-full ring-2 ring-white/20 shrink-0"
-											style={{ backgroundColor: org.color }}
-										/>
+										<TeamLogo team={org} className="w-10 h-10" />
 										<span>{org.name}</span>
 									</h3>
 									<Badge variant={getTierBadgeVariant(org.tier)}>Tier {org.tier}</Badge>
@@ -211,12 +209,7 @@ const SelectOrg = () => {
 						{selectedOrganization ? (
 							<div className="space-y-5 animate-in fade-in duration-300">
 								<div className="text-center py-5 bg-[#0f1923] rounded-xs border border-[#1f2937] relative overflow-hidden">
-									<div
-										className="w-14 h-14 mx-auto rounded-full mb-3 flex items-center justify-center font-black text-white text-xl shadow-[0_0_20px_rgba(255,255,255,0.1)] border border-white/20"
-										style={{ backgroundColor: selectedOrganization.color }}
-									>
-										{selectedOrganization.name.charAt(0)}
-									</div>
+									<TeamLogo team={selectedOrganization} className="w-16 h-16 mx-auto mb-3" />
 									<h3 className="text-2xl font-black text-white tracking-tighter">
 										{selectedOrganization.name}
 									</h3>
