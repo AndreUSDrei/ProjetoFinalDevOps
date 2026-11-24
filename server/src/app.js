@@ -25,11 +25,17 @@ export const createApp = ({ db, logger } = {}) => {
 	}
 
 	app.get('/health', (req, res) => {
+		const version = process.env.APP_VERSION || process.env.npm_package_version || '1.0.0';
+		const commit = process.env.COMMIT_SHA || 'dev';
+
 		try {
 			const databaseUp = pingDb(db);
 			if (!databaseUp) {
 				return res.status(503).json({
 					status: 'error',
+					service: 'valorant-manager-api',
+					version,
+					commit,
 					database: 'down',
 					uptime: process.uptime(),
 					timestamp: new Date().toISOString(),
@@ -39,6 +45,8 @@ export const createApp = ({ db, logger } = {}) => {
 			return res.json({
 				status: 'ok',
 				service: 'valorant-manager-api',
+				version,
+				commit,
 				database: 'up',
 				uptime: process.uptime(),
 				startedAt: new Date(startedAt).toISOString(),
@@ -48,6 +56,9 @@ export const createApp = ({ db, logger } = {}) => {
 			req.log?.error({ err: error }, 'health check failed');
 			return res.status(503).json({
 				status: 'error',
+				service: 'valorant-manager-api',
+				version,
+				commit,
 				database: 'down',
 				timestamp: new Date().toISOString(),
 			});
