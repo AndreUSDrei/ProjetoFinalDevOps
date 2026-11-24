@@ -16,6 +16,7 @@ import {
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
+import TeamLogo from '../components/organization/TeamLogo';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import TransferMarket from './TransferMarket';
@@ -350,12 +351,7 @@ const Dashboard = () => {
 			>
 				<div className="space-y-4">
 					<div className="flex items-center gap-3 bg-[#0f1923] p-4 rounded-xs border border-[#1f2937]">
-						<div
-							className="w-10 h-10 rounded-full flex items-center justify-center font-black text-white shrink-0"
-							style={{ backgroundColor: organization.color }}
-						>
-							{organization.name.charAt(0)}
-						</div>
+						<TeamLogo team={organization} className="w-10 h-10" />
 						<div>
 							<h4 className="font-black text-white uppercase text-base">{organization.name}</h4>
 							<p className="text-xs text-gray-400">

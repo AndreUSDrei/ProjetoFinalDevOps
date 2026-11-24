@@ -22,12 +22,14 @@ const MatchSim = () => {
 		.slice(0, 5);
 
 	const myTeam = {
+		id: organization.id,
 		name: organization.name,
 		color: organization.color,
 		region: organization.region,
 		starters: roster.starters,
 	};
 	const oppTeam = {
+		id: opponent.id,
 		name: opponent.name,
 		color: opponent.color,
 		region: opponent.region,
