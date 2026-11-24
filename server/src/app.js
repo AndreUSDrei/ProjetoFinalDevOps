@@ -11,9 +11,12 @@ export const createApp = ({ db, logger } = {}) => {
 		throw new Error('Database instance is required');
 	}
 
-	const corsOrigin = process.env.CORS_ORIGIN
-		? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
-		: ['http://localhost:5173', 'http://localhost:8080'];
+	const rawCors = process.env.CORS_ORIGIN?.trim();
+	const corsOrigin = !rawCors
+		? ['http://localhost:5173', 'http://localhost:8080']
+		: rawCors === '*'
+		? '*'
+		: rawCors.split(',').map((o) => o.trim()).filter(Boolean);
 
 	const app = express();
 	app.disable('x-powered-by');

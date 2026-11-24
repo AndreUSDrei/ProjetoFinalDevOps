@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: valorant-manager-api
+    runtime: docker
+    dockerfilePath: server/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_PATH
+        value: /data/app.db
+      - key: SEED_DIR
+        value: /app/seed
+      - key: NODE_OPTIONS
+        value: --experimental-sqlite
