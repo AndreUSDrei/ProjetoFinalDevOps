@@ -132,14 +132,25 @@ npm test
 
 ## 7. CI/CD
 
-Push ou Pull Request para `main` dispara `.github/workflows/ci.yml`:
+O projeto conta com pipelines automatizados no GitHub Actions:
 
-1. Instala dependências
-2. Roda testes
-3. Faz `vite build`
-4. Faz `docker compose build`
+- **CI (`.github/workflows/ci.yml`)**: Disparado a cada Push ou Pull Request para `main`:
+  1. Instala dependências (front e API)
+  2. Executa testes unitários (Vitest) e testes de integração (Supertest)
+  3. Executa o build de produção do frontend (`vite build`)
+  4. Valida a construção das imagens Docker locais (`docker compose build`)
 
-Não há publish em registry: o “deploy” de demonstração é o `docker compose up`.
+- **CD (`.github/workflows/cd.yml`)**: Disparado em pushes para a branch `main` e em novas tags de versão (`v*`):
+  1. Executa a suíte de testes automatizados
+  2. Constrói e publica as imagens da API e da Web no **GitHub Container Registry (GHCR)** com tags semânticas (`v1.0.0`), hash de commit (`sha-...`) e `latest`
+  3. Executa um **Smoke Test** pós-deploy com `curl /health`, validando que a imagem publicada sobe corretamente, conecta ao SQLite e expõe a versão e o commit ativos
+
+### 7.1 Como rodar diretamente as imagens publicadas (GHCR)
+
+```bash
+docker run -d -p 3001:3001 --name api ghcr.io/andreusdrei/projetofinaldevops/api:latest
+docker run -d -p 8080:80 --name web ghcr.io/andreusdrei/projetofinaldevops/web:latest
+```
 
 Como contribuir, padrão de commits e proteção de `main`: veja [CONTRIBUTING.md](CONTRIBUTING.md).
 
