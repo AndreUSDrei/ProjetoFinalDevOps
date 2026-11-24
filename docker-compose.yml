@@ -3,6 +3,9 @@ services:
     build:
       context: .
       dockerfile: server/Dockerfile
+      args:
+        APP_VERSION: "1.0.0"
+        COMMIT_SHA: "local"
     environment:
       PORT: 3001
       NODE_ENV: production
@@ -11,6 +14,8 @@ services:
       CORS_ORIGIN: http://localhost:8080
       LOG_LEVEL: info
       NODE_OPTIONS: --experimental-sqlite
+      APP_VERSION: "1.0.0"
+      COMMIT_SHA: "local"
     volumes:
       - sqlite-data:/data
     restart: unless-stopped

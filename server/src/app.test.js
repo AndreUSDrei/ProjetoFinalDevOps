@@ -21,8 +21,12 @@ test('GET /health returns ok and sqlite ping', async () => {
 	const res = await request(app).get('/health');
 	assert.equal(res.status, 200);
 	assert.equal(res.body.status, 'ok');
+	assert.equal(res.body.service, 'valorant-manager-api');
 	assert.equal(res.body.database, 'up');
 	assert.equal(typeof res.body.uptime, 'number');
+	assert.ok(res.body.version);
+	assert.ok(res.body.commit);
+	assert.ok(res.body.timestamp);
 });
 
 test('GET /api/players returns seeded roster', async () => {
