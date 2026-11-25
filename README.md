@@ -134,12 +134,13 @@ npm test
 
 Push ou Pull Request para `main` dispara `.github/workflows/ci.yml`:
 
-1. Instala dependências
-2. Roda testes
-3. Faz `vite build`
-4. Faz `docker compose build`
+1. Instala dependências do front e da API
+2. Executa testes unitários do front-end e testes de integração da API
+3. Gera o build de produção do front-end
+4. Constrói e inicia os serviços Docker para um smoke test ponta a ponta, verificando a página, o healthcheck e os endpoints de jogadores e organizações
+5. Em push na `main`, publica as imagens `web` e `api` no GitHub Container Registry (GHCR), com tags `latest` e SHA do commit
 
-Não há publish em registry: o “deploy” de demonstração é o `docker compose up`.
+O pipeline entrega as imagens no GHCR; a implantação em um servidor continua sendo feita separadamente com Docker Compose.
 
 Como contribuir, padrão de commits e proteção de `main`: veja [CONTRIBUTING.md](CONTRIBUTING.md).
 
