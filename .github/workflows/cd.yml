@@ -9,12 +9,14 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   test-build-and-publish:
     name: Build, Publish to GHCR & Smoke Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -130,3 +132,22 @@ jobs:
             echo "Smoke test falhou: /health nao respondeu com status ok no tempo limite."
             exit 1
           fi
+
+  verify-public-deploy:
+    name: Verify Render & Vercel
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: test-build-and-publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify public deployment
+        env:
+          API_URL: ${{ vars.RENDER_API_URL || 'https://valorant-manager-api.onrender.com' }}
+          WEB_URL: ${{ vars.VERCEL_APP_URL || 'https://projetofinaldevops.vercel.app' }}
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: node scripts/verify-deployment.mjs

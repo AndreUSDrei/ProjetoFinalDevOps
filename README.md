@@ -60,10 +60,18 @@ Download do Node.js: https://nodejs.org
 
 ## 4. Arquitetura
 
-```
-Navegador → Vite (dev) ou Nginx (Docker)
+```text
+Desenvolvimento:
+Navegador → Vite (porta 5173)
               /api  /health → Express (porta 3001)
-                                SQLite (arquivo em volume)
+                                SQLite (arquivo local)
+
+Produção:
+Navegador → Vercel (frontend React)
+              HTTPS/CORS → Render (API Docker)
+                              SQLite (disco efêmero no plano free)
+
+GitHub Actions → testes, build, GHCR e verificação pública do deploy
 ```
 
 | Serviço | Papel |
@@ -71,6 +79,12 @@ Navegador → Vite (dev) ou Nginx (Docker)
 | Front (`src/`) | UI, regras de jogo, simulação |
 | API (`server/`) | seed de jogadores/orgs, save da campanha, logs, `/health` |
 | SQLite | persistência do save + catálogo |
+
+Endereços públicos:
+
+- Aplicação: https://projetofinaldevops.vercel.app
+- API: https://valorant-manager-api.onrender.com
+- Healthcheck: https://valorant-manager-api.onrender.com/health
 
 ## 5. API e banco de dados
 
@@ -91,6 +105,7 @@ O projeto usa **SQLite**, que guarda o save da campanha e o catálogo de jogador
 - **Local do arquivo:** definido por `DATABASE_PATH` (padrão: `./data/app.db`).
 - **Dados iniciais (seed):** lidos da pasta definida em `SEED_DIR` (padrão: `../src/data`).
 - **No Docker:** o arquivo fica no volume `sqlite-data`, então o save continua depois de `docker compose down` (desde que não use `-v`).
+- **No Render free:** o disco é efêmero; saves feitos na nuvem podem ser perdidos em reinícios ou redeploys. Para persistência permanente, use um banco gerenciado e migre o SQLite.
 - **Requisito:** a API usa o módulo `node:sqlite`, disponível a partir do Node 22.5.
 
 ## 6. Variáveis de ambiente
@@ -104,13 +119,16 @@ copy server\.env.example server\.env
 
 | Variável | Onde | Para que serve | Padrão |
 | --- | --- | --- | --- |
-| `VITE_API_URL` | front | Endereço da API usado pelo front | vazio (usa `/api` via proxy ou Nginx) |
+| `VITE_API_URL` | front | Endereço da API usado pelo front | vazio local; URL do Render automaticamente na Vercel |
 | `PORT` | API | Porta em que a API sobe | `3001` |
 | `DATABASE_PATH` | API | Caminho do arquivo SQLite | `./data/app.db` |
 | `SEED_DIR` | API | Pasta com os dados iniciais (seed) | `../src/data` |
-| `CORS_ORIGIN` | API | Origem permitida pelo CORS | `http://localhost:5173` |
+| `CORS_ORIGIN` | API | Origem permitida pelo CORS | locais em desenvolvimento; origem da Vercel no Render |
 | `LOG_LEVEL` | API | Nível de detalhe dos logs | `info` |
 | `NODE_ENV` | API | Ambiente de execução | `development` |
+| `RENDER_GIT_COMMIT` | Render | Commit da implantação, usado no `/health` quando `COMMIT_SHA` está vazio | fornecida pelo Render |
+
+Na Vercel, o build detecta `VERCEL=1` e compila o frontend com `https://valorant-manager-api.onrender.com`. Definir `VITE_API_URL` sobrescreve esse endereço. Fora da Vercel, o valor vazio preserva o proxy do Vite e o roteamento relativo do Nginx.
 
 ## 7. Instalação e execução (desenvolvimento)
 
@@ -153,9 +171,9 @@ docker compose up --build
 ```
 
 - App: http://localhost:8080
-- API direta: http://localhost:3001/health
+- Healthcheck pelo front: http://localhost:8080/health
 
-O serviço `web` só sobe depois do healthcheck da `api`. O arquivo SQLite fica no volume `sqlite-data`.
+A API não publica a porta 3001 no host; ela fica acessível apenas na rede interna do Compose. O serviço `web` só sobe depois do healthcheck da `api`. O arquivo SQLite fica no volume `sqlite-data`.
 
 Para parar: `docker compose down`. Para manter o banco, não use `-v`.
 
@@ -175,7 +193,8 @@ npm test
 | Comando | O que cobre |
 | --- | --- |
 | `npm run test:front` | Vitest — fórmulas e motor de partida |
-| `npm run test:api` | Supertest — `/health`, seed, save/load |
+| `npm run test:api` | Supertest — `/health`, seed, save/load e commit do Render |
+| `npm run verify:deploy` | Smoke público — commit, healthcheck, seed e URL da API no bundle da Vercel |
 
 ## 10. CI/CD e deploy
 
@@ -194,6 +213,23 @@ O projeto tem duas pipelines no GitHub Actions.
 2. Constrói e publica as imagens da API e do front no GitHub Container Registry (GHCR), com tags de versão (`v1.0.0`), hash do commit (`sha-...`) e `latest`
 3. Executa um smoke test com `curl /health`, para validar que a imagem publicada sobe, conecta ao SQLite e expõe a versão e o commit ativos
 
+**Deploy contínuo:** a `main` alimenta automaticamente a API no Render e o frontend na Vercel. O `render.yaml` define `autoDeployTrigger: commit`, healthcheck e CORS restrito à origem pública da Vercel. O build da Vercel detecta `VERCEL=1` e incorpora a URL pública da API.
+
+Depois da publicação das imagens, o job `verify-public-deploy` aguarda até 10 minutos e valida:
+
+1. `/health` retorna `200`, SQLite ativo e o commit esperado;
+2. `/api/players` retorna o seed;
+3. a página da Vercel contém o meta `app-commit` esperado;
+4. os bundles JavaScript publicados apontam para a URL da API.
+
+Para executar a mesma verificação localmente:
+
+```bash
+npm run verify:deploy
+```
+
+As URLs podem ser sobrescritas pelas variáveis `API_URL` e `WEB_URL`; `EXPECTED_COMMIT` exige um commit específico. No GitHub Actions, as variables opcionais `RENDER_API_URL` e `VERCEL_APP_URL` permitem trocar os endereços sem editar o workflow. Não é necessário token de deploy: Render e Vercel usam suas integrações Git nativas.
+
 Como contribuir, padrão de commits e proteção da `main`: veja o [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 11. Scripts
@@ -205,6 +241,7 @@ Como contribuir, padrão de commits e proteção da `main`: veja o [CONTRIBUTING
 | `npm run build` | Build de produção em `dist/` |
 | `npm run preview` | Serve o `dist/` |
 | `npm test` | Testes front + API |
+| `npm run verify:deploy` | Valida API Render e frontend Vercel publicados |
 
 ## 12. Estrutura do projeto
 
@@ -219,6 +256,7 @@ ProjetoFinalDevOps/
 ├── Dockerfile                 # Front (Nginx)
 ├── docker-compose.yml
 ├── nginx.conf
+├── scripts/                  # verificação do deploy público
 ├── CONTRIBUTING.md
 └── README.md
 ```
@@ -231,9 +269,10 @@ Para checar a saúde da API:
 
 ```bash
 curl http://localhost:3001/health
+curl https://valorant-manager-api.onrender.com/health
 ```
 
-Resposta esperada: `"status":"ok"` e `"database":"up"`.
+Resposta esperada: `"status":"ok"` e `"database":"up"`. Em produção, `commit` identifica a versão implantada; `startedAt` ajuda a confirmar que o serviço reiniciou após o deploy.
 
 ## 14. Solução de problemas
 
@@ -267,3 +306,9 @@ Demonstração em contêineres:
 docker compose up --build
 # http://localhost:8080
 ```
+
+Produção:
+
+- Vercel: https://projetofinaldevops.vercel.app
+- API Render: https://valorant-manager-api.onrender.com
+- Validação: `npm run verify:deploy`
