@@ -29,7 +29,7 @@ export const createApp = ({ db, logger } = {}) => {
 
 	app.get('/health', (req, res) => {
 		const version = process.env.APP_VERSION || process.env.npm_package_version || '1.0.0';
-		const commit = process.env.COMMIT_SHA || 'dev';
+		const commit = process.env.COMMIT_SHA || process.env.RENDER_GIT_COMMIT || 'dev';
 
 		try {
 			const databaseUp = pingDb(db);
