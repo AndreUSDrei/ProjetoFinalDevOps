@@ -10,6 +10,10 @@ ENV DATABASE_PATH=/data/app.db
 ENV SEED_DIR=/app/seed
 ENV LOG_LEVEL=info
 ENV NODE_OPTIONS=--experimental-sqlite
+ARG APP_VERSION=1.0.0
+ARG COMMIT_SHA=
+ENV APP_VERSION=$APP_VERSION
+ENV COMMIT_SHA=$COMMIT_SHA
 RUN mkdir -p /data && chown -R node:node /app /data
 USER node
 EXPOSE 3001

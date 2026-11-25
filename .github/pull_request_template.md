@@ -1,6 +1,9 @@
 ## Resumo
 -
 
+## Issue relacionada
+- Closes #
+
 ## Tipo de mudança
 - [ ] feat
 - [ ] fix

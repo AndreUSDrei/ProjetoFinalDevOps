@@ -11,9 +11,12 @@ export const createApp = ({ db, logger } = {}) => {
 		throw new Error('Database instance is required');
 	}
 
-	const corsOrigin = process.env.CORS_ORIGIN
-		? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
-		: ['http://localhost:5173', 'http://localhost:8080'];
+	const rawCors = process.env.CORS_ORIGIN?.trim();
+	const corsOrigin = !rawCors
+		? ['http://localhost:5173', 'http://localhost:8080']
+		: rawCors === '*'
+		? '*'
+		: rawCors.split(',').map((o) => o.trim()).filter(Boolean);
 
 	const app = express();
 	app.disable('x-powered-by');
@@ -25,11 +28,17 @@ export const createApp = ({ db, logger } = {}) => {
 	}
 
 	app.get('/health', (req, res) => {
+		const version = process.env.APP_VERSION || process.env.npm_package_version || '1.0.0';
+		const commit = process.env.COMMIT_SHA || process.env.RENDER_GIT_COMMIT || 'dev';
+
 		try {
 			const databaseUp = pingDb(db);
 			if (!databaseUp) {
 				return res.status(503).json({
 					status: 'error',
+					service: 'valorant-manager-api',
+					version,
+					commit,
 					database: 'down',
 					uptime: process.uptime(),
 					timestamp: new Date().toISOString(),
@@ -39,6 +48,8 @@ export const createApp = ({ db, logger } = {}) => {
 			return res.json({
 				status: 'ok',
 				service: 'valorant-manager-api',
+				version,
+				commit,
 				database: 'up',
 				uptime: process.uptime(),
 				startedAt: new Date(startedAt).toISOString(),
@@ -48,6 +59,9 @@ export const createApp = ({ db, logger } = {}) => {
 			req.log?.error({ err: error }, 'health check failed');
 			return res.status(503).json({
 				status: 'error',
+				service: 'valorant-manager-api',
+				version,
+				commit,
 				database: 'down',
 				timestamp: new Date().toISOString(),
 			});

@@ -21,8 +21,29 @@ test('GET /health returns ok and sqlite ping', async () => {
 	const res = await request(app).get('/health');
 	assert.equal(res.status, 200);
 	assert.equal(res.body.status, 'ok');
+	assert.equal(res.body.service, 'valorant-manager-api');
 	assert.equal(res.body.database, 'up');
 	assert.equal(typeof res.body.uptime, 'number');
+	assert.ok(res.body.version);
+	assert.ok(res.body.commit);
+	assert.ok(res.body.timestamp);
+});
+
+test('GET /health uses the Render commit when no image commit is provided', async (t) => {
+	const previousCommit = process.env.COMMIT_SHA;
+	const previousRenderCommit = process.env.RENDER_GIT_COMMIT;
+	process.env.COMMIT_SHA = '';
+	process.env.RENDER_GIT_COMMIT = 'render-commit-sha';
+	t.after(() => {
+		if (previousCommit === undefined) delete process.env.COMMIT_SHA;
+		else process.env.COMMIT_SHA = previousCommit;
+		if (previousRenderCommit === undefined) delete process.env.RENDER_GIT_COMMIT;
+		else process.env.RENDER_GIT_COMMIT = previousRenderCommit;
+	});
+
+	const res = await request(app).get('/health');
+	assert.equal(res.status, 200);
+	assert.equal(res.body.commit, 'render-commit-sha');
 });
 
 test('GET /api/players returns seeded roster', async () => {
